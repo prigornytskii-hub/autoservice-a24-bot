@@ -14,7 +14,7 @@ dependependencies = [
     "python-dotenv>=1.2.1,<2",
     "openai>=1.0.0",
 ]
-]
+
 
 [tool.uv]
 package = false
