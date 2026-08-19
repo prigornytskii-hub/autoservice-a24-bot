@@ -286,9 +286,9 @@ def receive_description(message):
             caption=post_text,
             reply_markup=post_buttons()
         )
-
-    except Exception as error:
-        print("OPENAI ERROR:", error)
+except Exception as e:
+    print("OPENAI ERROR:", repr(e), flush=True)
+    
 
         bot.send_message(
             chat_id,
