@@ -28,7 +28,7 @@ user_data = {}
 
 
 # =========================================================
-# КЛАВІАТУРИ
+# ГОЛОВНЕ МЕНЮ
 # =========================================================
 
 def main_menu():
@@ -55,16 +55,31 @@ def main_menu():
     return keyboard
 
 
+# =========================================================
+# КНОПКИ ПІД ГОТОВИМ ПОСТОМ
+# =========================================================
+
 def post_buttons():
     keyboard = types.InlineKeyboardMarkup()
 
     keyboard.row(
         types.InlineKeyboardButton(
-            "✅ Опублікувати",
-            callback_data="publish"
+            "✂️ Коротше",
+            callback_data="shorter"
         ),
         types.InlineKeyboardButton(
-            "🔄 Переробити",
+            "🎯 Професійніше",
+            callback_data="professional"
+        )
+    )
+
+    keyboard.row(
+        types.InlineKeyboardButton(
+            "👤 Простіше",
+            callback_data="simpler"
+        ),
+        types.InlineKeyboardButton(
+            "🔄 Інший варіант",
             callback_data="regenerate"
         )
     )
@@ -75,6 +90,13 @@ def post_buttons():
             callback_data="edit_post"
         ),
         types.InlineKeyboardButton(
+            "✅ Опублікувати",
+            callback_data="publish"
+        )
+    )
+
+    keyboard.row(
+        types.InlineKeyboardButton(
             "❌ Скасувати",
             callback_data="cancel"
         )
@@ -84,13 +106,26 @@ def post_buttons():
 
 
 # =========================================================
-# OPENAI
+# OPENAI: ДОПОМІЖНІ ФУНКЦІЇ
 # =========================================================
 
 def download_telegram_photo(photo_id):
     file_info = bot.get_file(photo_id)
     return bot.download_file(file_info.file_path)
 
+
+def clean_post(text):
+    text = (text or "").strip()
+
+    if len(text) > 1000:
+        text = text[:997] + "..."
+
+    return text
+
+
+# =========================================================
+# ПРОМПТ ДЛЯ ФОТО
+# =========================================================
 
 def build_photo_prompt(user_description, variation=False):
     variation_text = ""
@@ -99,18 +134,18 @@ def build_photo_prompt(user_description, variation=False):
         variation_text = """
 Це повторна генерація.
 
-Зроби нову версію публікації:
+Зроби публікацію повністю по-іншому:
 - інший заголовок;
 - інший вступ;
 - інший акцент;
-- інша структура речень;
-- не повторюй попередні шаблонні формулювання.
+- інша структура;
+- не повторюй попередній текст.
 """
 
     return f"""
-Ти — професійний контент-асистент автосервісу Autoservice A24.
+Ти — контент-асистент професійного автосервісу Autoservice A24.
 
-Тобі передано фотографію реальної роботи з автосервісу
+Тобі передано реальну фотографію роботи з автосервісу
 та короткий коментар механіка.
 
 КОМЕНТАР МЕХАНІКА:
@@ -123,61 +158,52 @@ def build_photo_prompt(user_description, variation=False):
 Визнач:
 - яка деталь, вузол або процес зображений;
 - які особливості реально видно;
-- чи видно сліди зносу, тертя, забруднення, пошкодження,
-  перегріву, демонтажу або ремонту;
-- що на фото може бути цікавим для власника автомобіля.
-
-Використовуй коментар механіка як головний технічний контекст,
-але доповнюй його тим, що реально видно на фотографії.
+- чи видно сліди тертя, зносу, пошкодження, забруднення,
+  демонтажу або ремонту;
+- який технічний момент на цьому фото найцікавіший.
 
 ВАЖЛИВО:
 
 1. Не пиши універсальний шаблон.
-2. Кожна новина повинна бути написана саме під конкретне фото.
-3. Не вигадуй марку автомобіля, двигун, пробіг або несправність,
-   якщо цього немає в описі або це неможливо достовірно визначити.
-4. Не вигадуй вимірювання, зазори, тиск, компресію чи інші цифри.
-5. Якщо по фото неможливо точно підтвердити пошкодження —
-   використовуй формулювання:
-   "видно сліди роботи",
-   "помітний стан робочої поверхні",
-   "деталь потребує перевірки",
-   а не категоричний діагноз.
-6. Не повторюй постійно:
-   "провели необхідні роботи",
-   "регулярна діагностика допомагає уникнути несправностей".
-7. Пояснюй технічну тему простою мовою для звичайного клієнта.
-8. Не починай словами:
-   "На фото ми бачимо".
-9. Додай одну цікаву технічну деталь про те,
-   чому цей вузол важливий.
-10. Текст має звучати професійно, але живо.
+2. Публікація повинна бути прив'язана саме до конкретного фото.
+3. Коментар механіка має пріоритет.
+4. Не вигадуй марку автомобіля, двигун або пробіг.
+5. Не вигадуй результати вимірювань.
+6. Не вигадуй точну причину несправності, якщо її неможливо підтвердити.
+7. Якщо видно сліди роботи або зносу — можеш це описати обережно.
+8. Не роби категоричний діагноз тільки по фотографії.
+9. Пояснюй клієнту просто, але технічно грамотно.
+10. Уникай шаблонних фраз.
+11. Не починай словами "На фото ми бачимо".
+12. Не перевантажуй текст.
 
 СТРУКТУРА:
 
-Перша строка:
-короткий сильний заголовок з емодзі.
+• короткий цікавий заголовок;
+• що саме перевіряємо/ремонтуємо;
+• що цікавого можна побачити;
+• чому ця деталь або вузол важливі;
+• короткий висновок.
 
-Потім:
-- що конкретно зображено;
-- що перевіряємо або ремонтуємо;
-- на що звертаємо увагу;
-- чому це важливо для двигуна або автомобіля;
-- короткий висновок для клієнта.
-
-В кінці обов'язково:
+В кінці:
 
 🔧 Autoservice A24
 📍 Діагностика та ремонт автомобілів
 
 Мова: українська.
 
-Довжина:
-приблизно 500–850 символів.
+Оптимальна довжина:
+450–700 символів.
+
+Текст має добре читатися як пост у Google Business Profile.
 
 {variation_text}
 """
 
+
+# =========================================================
+# ГЕНЕРАЦІЯ ПОСТА З ФОТО
+# =========================================================
 
 def generate_post_from_photo(
     photo_id,
@@ -217,18 +243,17 @@ def generate_post_from_photo(
         ]
     )
 
-    post_text = response.output_text.strip()
+    post_text = clean_post(response.output_text)
 
     if not post_text:
-        raise RuntimeError(
-            "OpenAI returned empty response"
-        )
-
-    if len(post_text) > 1000:
-        post_text = post_text[:997] + "..."
+        raise RuntimeError("OpenAI returned empty response")
 
     return post_text
 
+
+# =========================================================
+# ГЕНЕРАЦІЯ ПОСТА ТІЛЬКИ З ТЕКСТУ
+# =========================================================
 
 def generate_post_from_text(
     user_description,
@@ -238,42 +263,37 @@ def generate_post_from_text(
 
     if variation:
         variation_text = """
-Це повторна генерація.
-Зроби зовсім іншу подачу та інший заголовок.
+Зроби абсолютно іншу версію:
+інший заголовок, інша подача та інший акцент.
 """
 
     prompt = f"""
 Ти — контент-асистент автосервісу Autoservice A24.
 
-Механік написав:
+Опис роботи від механіка:
 
 "{user_description}"
 
-Створи цікаву новину українською мовою
-для Google Business Profile.
+Створи професійну, цікаву та зрозумілу
+публікацію українською мовою для Google Business Profile.
 
 Не вигадуй факти, яких немає в описі.
 
 Поясни:
 - що було зроблено;
-- чому ця робота важлива;
-- які проблеми може попередити така перевірка або ремонт.
+- навіщо це робиться;
+- чому це важливо для автомобіля;
+- що корисно знати власнику.
 
-Не використовуй постійно однакові шаблонні фрази.
-
-Структура:
-
-• короткий заголовок з емодзі;
-• суть роботи;
-• коротке технічне пояснення;
-• користь для клієнта;
+Не пиши сухий шаблон.
 
 В кінці:
 
 🔧 Autoservice A24
 📍 Діагностика та ремонт автомобілів
 
-Довжина приблизно 500–800 символів.
+Довжина:
+450–700 символів.
 
 {variation_text}
 """
@@ -283,21 +303,110 @@ def generate_post_from_text(
         input=prompt
     )
 
-    post_text = response.output_text.strip()
+    post_text = clean_post(response.output_text)
 
     if not post_text:
-        raise RuntimeError(
-            "OpenAI returned empty response"
-        )
-
-    if len(post_text) > 1000:
-        post_text = post_text[:997] + "..."
+        raise RuntimeError("OpenAI returned empty response")
 
     return post_text
 
 
 # =========================================================
-# START
+# ПЕРЕРОБКА ВЖЕ ГОТОВОГО ПОСТА
+# =========================================================
+
+def rewrite_post(current_text, mode):
+    instructions = {
+        "shorter": """
+Зроби цей пост значно коротшим.
+
+Збережи:
+- основний технічний зміст;
+- найцікавіший момент;
+- Autoservice A24.
+
+Оптимальна довжина:
+250–400 символів.
+
+Без води.
+""",
+
+        "professional": """
+Перепиши цей пост професійніше.
+
+Тон:
+експертний автосервіс.
+
+Зроби текст технічно точнішим,
+але зрозумілим звичайному клієнту.
+
+Не вигадуй нові факти.
+""",
+
+        "simpler": """
+Перепиши цей пост простішою мовою.
+
+Прибери зайву технічну складність.
+
+Текст має легко зрозуміти клієнт,
+який не розбирається в будові автомобіля.
+
+Не вигадуй нові факти.
+""",
+
+        "regenerate": """
+Напиши повністю нову версію цього поста.
+
+Зміни:
+- заголовок;
+- вступ;
+- структуру;
+- акцент.
+
+Збережи факти з оригінального тексту.
+Не вигадуй нові факти.
+"""
+    }
+
+    instruction = instructions.get(
+        mode,
+        instructions["regenerate"]
+    )
+
+    prompt = f"""
+Ти редагуєш готовий пост автосервісу Autoservice A24.
+
+ПОТОЧНИЙ ПОСТ:
+
+{current_text}
+
+ЗАВДАННЯ:
+
+{instruction}
+
+В кінці залиш:
+
+🔧 Autoservice A24
+📍 Діагностика та ремонт автомобілів
+
+Мова: українська.
+"""
+
+    response = client.responses.create(
+        model=OPENAI_MODEL,
+        input=prompt
+    )
+
+    new_text = clean_post(response.output_text)
+
+    if not new_text:
+        raise RuntimeError("OpenAI returned empty response")
+
+    return new_text
+
+
+# =========================================================
+# /START
 # =========================================================
 
 @bot.message_handler(commands=["start"])
@@ -310,15 +419,14 @@ def start(message):
     bot.send_message(
         chat_id,
         "🔧 Autoservice A24\n\n"
-        "Вітаю! Я ваш помічник для створення "
-        "та публікації новин.\n\n"
+        "Помічник для створення публікацій.\n\n"
         "Оберіть потрібну дію 👇",
         reply_markup=main_menu()
     )
 
 
 # =========================================================
-# НОВИНА З ФОТО
+# СТВОРЕННЯ НОВИНИ З ФОТО
 # =========================================================
 
 @bot.message_handler(
@@ -329,6 +437,7 @@ def start_photo_post(message):
     chat_id = message.chat.id
 
     user_state[chat_id] = "waiting_photo"
+
     user_data[chat_id] = {
         "mode": "photo"
     }
@@ -336,7 +445,7 @@ def start_photo_post(message):
     bot.send_message(
         chat_id,
         "📸 Надішліть фотографію виконаної роботи.\n\n"
-        "🤖 Я проаналізую, що саме зображено на фото."
+        "Я проаналізую, що саме зображено."
     )
 
 
@@ -352,6 +461,7 @@ def receive_photo(message):
     photo_id = message.photo[-1].file_id
 
     user_data.setdefault(chat_id, {})
+
     user_data[chat_id]["photo_id"] = photo_id
     user_data[chat_id]["mode"] = "photo"
 
@@ -360,14 +470,13 @@ def receive_photo(message):
     bot.send_message(
         chat_id,
         "✅ Фото отримано.\n\n"
-        "Тепер коротко напишіть, що ви робили.\n\n"
-        "Можна буквально 2–5 слів.\n\n"
+        "Тепер коротко напишіть, що робили.\n\n"
         "Наприклад:\n"
         "• перевірка шатунних вкладишів\n"
         "• заміна форсунок\n"
         "• діагностика турбіни\n"
         "• заміна ланцюга ГРМ\n\n"
-        "🤖 Фото я проаналізую сам."
+        "🤖 Деталі з фото я проаналізую сам."
     )
 
 
@@ -380,10 +489,6 @@ def receive_description(message):
     chat_id = message.chat.id
 
     if not message.text:
-        bot.send_message(
-            chat_id,
-            "Напишіть короткий опис текстом."
-        )
         return
 
     description = message.text.strip()
@@ -423,13 +528,13 @@ def receive_description(message):
 
         bot.send_message(
             chat_id,
-            "⚠️ Не вдалося проаналізувати фото через ШІ.\n\n"
-            "У Railway записана точна причина помилки."
+            "⚠️ Не вдалося створити пост.\n\n"
+            "Точна причина записана в Railway."
         )
 
 
 # =========================================================
-# НОВИНА ТІЛЬКИ З ОПИСУ
+# НОВИНА З ОПИСУ
 # =========================================================
 
 @bot.message_handler(
@@ -440,16 +545,14 @@ def start_text_post(message):
     chat_id = message.chat.id
 
     user_state[chat_id] = "waiting_text_post"
+
     user_data[chat_id] = {
         "mode": "text"
     }
 
     bot.send_message(
         chat_id,
-        "✍️ Напишіть коротко, що було зроблено.\n\n"
-        "Наприклад:\n"
-        "BMW 3.0 дизель — замінили ланцюг ГРМ "
-        "та перевірили фази газорозподілу."
+        "✍️ Напишіть коротко, що було зроблено."
     )
 
 
@@ -467,6 +570,7 @@ def receive_text_post(message):
     description = message.text.strip()
 
     user_data.setdefault(chat_id, {})
+
     user_data[chat_id]["description"] = description
     user_data[chat_id]["mode"] = "text"
 
@@ -498,8 +602,7 @@ def receive_text_post(message):
 
         bot.send_message(
             chat_id,
-            "⚠️ Не вдалося створити новину через ШІ.\n\n"
-            "Перевірте журнал Railway."
+            "⚠️ Не вдалося створити пост."
         )
 
 
@@ -516,93 +619,109 @@ def callback_handler(call):
     except Exception:
         pass
 
-    if call.data == "publish":
+    data = user_data.get(chat_id, {})
+
+    current_text = data.get(
+        "post_text",
+        ""
+    )
+
+    # -----------------------------------------------------
+    # КОРОТШЕ / ПРОФЕСІЙНІШЕ / ПРОСТІШЕ / ІНШИЙ ВАРІАНТ
+    # -----------------------------------------------------
+
+    if call.data in [
+        "shorter",
+        "professional",
+        "simpler",
+        "regenerate"
+    ]:
+        if not current_text:
+            bot.send_message(
+                chat_id,
+                "⚠️ Не знайшов попередній текст."
+            )
+            return
+
+        messages = {
+            "shorter": "✂️ Роблю коротшу версію...",
+            "professional": "🎯 Роблю професійнішу версію...",
+            "simpler": "👤 Спрощую текст для клієнта...",
+            "regenerate": "🔄 Роблю повністю новий варіант..."
+        }
+
         bot.send_message(
             chat_id,
-            "✅ Пост готовий до публікації.\n\n"
-            "Наступним етапом підключимо "
-            "Google Business Profile."
-        )
-
-    elif call.data == "regenerate":
-        data = user_data.get(chat_id, {})
-
-        description = data.get(
-            "description",
-            ""
-        )
-
-        mode = data.get(
-            "mode",
-            "text"
-        )
-
-        bot.send_message(
-            chat_id,
-            "🔄 Роблю нову версію..."
+            messages[call.data]
         )
 
         try:
+            new_text = rewrite_post(
+                current_text,
+                call.data
+            )
+
+            user_data[chat_id]["post_text"] = new_text
+
+            mode = data.get("mode", "text")
+
             if mode == "photo":
-                photo_id = data["photo_id"]
+                photo_id = data.get("photo_id")
 
-                post_text = generate_post_from_photo(
+                bot.send_photo(
+                    chat_id,
                     photo_id,
-                    description,
-                    variation=True
+                    caption=new_text,
+                    reply_markup=post_buttons()
                 )
-
-                user_data[chat_id]["post_text"] = post_text
-
-                try:
-                    bot.edit_message_caption(
-                        chat_id=chat_id,
-                        message_id=call.message.message_id,
-                        caption=post_text,
-                        reply_markup=post_buttons()
-                    )
-
-                except Exception:
-                    bot.send_photo(
-                        chat_id,
-                        photo_id,
-                        caption=post_text,
-                        reply_markup=post_buttons()
-                    )
 
             else:
-                post_text = generate_post_from_text(
-                    description,
-                    variation=True
-                )
-
-                user_data[chat_id]["post_text"] = post_text
-
                 bot.send_message(
                     chat_id,
-                    post_text,
+                    new_text,
                     reply_markup=post_buttons()
                 )
 
         except Exception as error:
             print(
-                "REGENERATE ERROR:",
+                "REWRITE ERROR:",
                 repr(error),
                 flush=True
             )
 
             bot.send_message(
                 chat_id,
-                "⚠️ Не вдалося створити нову версію."
+                "⚠️ Не вдалося переробити текст."
             )
+
+    # -----------------------------------------------------
+    # РЕДАГУВАТИ ВРУЧНУ
+    # -----------------------------------------------------
 
     elif call.data == "edit_post":
         user_state[chat_id] = "editing_post"
 
         bot.send_message(
             chat_id,
-            "✏️ Надішліть свій варіант тексту поста."
+            "✏️ Надішліть свій готовий варіант тексту.\n\n"
+            "Я підставлю його замість поточного."
         )
+
+    # -----------------------------------------------------
+    # ПУБЛІКАЦІЯ
+    # -----------------------------------------------------
+
+    elif call.data == "publish":
+        bot.send_message(
+            chat_id,
+            "✅ Пост готовий.\n\n"
+            "Наступним етапом підключимо "
+            "пряму публікацію в Google Business Profile."
+        )
+
+    # -----------------------------------------------------
+    # СКАСУВАТИ
+    # -----------------------------------------------------
 
     elif call.data == "cancel":
         user_state.pop(chat_id, None)
@@ -616,7 +735,7 @@ def callback_handler(call):
 
 
 # =========================================================
-# РЕДАГУВАННЯ
+# РУЧНЕ РЕДАГУВАННЯ
 # =========================================================
 
 @bot.message_handler(
@@ -630,9 +749,12 @@ def edit_post(message):
     if not message.text:
         return
 
-    new_text = message.text.strip()
+    new_text = clean_post(
+        message.text
+    )
 
     user_data.setdefault(chat_id, {})
+
     user_data[chat_id]["post_text"] = new_text
 
     mode = user_data[chat_id].get(
@@ -647,20 +769,19 @@ def edit_post(message):
             "photo_id"
         )
 
-        if photo_id:
-            bot.send_photo(
-                chat_id,
-                photo_id,
-                caption=new_text[:1000],
-                reply_markup=post_buttons()
-            )
-            return
+        bot.send_photo(
+            chat_id,
+            photo_id,
+            caption=new_text,
+            reply_markup=post_buttons()
+        )
 
-    bot.send_message(
-        chat_id,
-        new_text,
-        reply_markup=post_buttons()
-    )
+    else:
+        bot.send_message(
+            chat_id,
+            new_text,
+            reply_markup=post_buttons()
+        )
 
 
 # =========================================================
@@ -676,29 +797,25 @@ def suggest_topic(message):
 
     bot.send_message(
         chat_id,
-        "🤖 Думаю над темою для новини..."
+        "🤖 Підбираю тему..."
     )
 
     try:
         response = client.responses.create(
             model=OPENAI_MODEL,
             input="""
-Запропонуй одну цікаву тему для короткої
-публікації автосервісу Autoservice A24.
+Запропонуй одну цікаву тему для Google Business Profile
+автосервісу Autoservice A24.
 
-Тема має бути корисною для власника автомобіля.
-
-Наприклад:
-ГРМ, форсунки, турбіна, олива, гальма,
-підвіска, охолодження, діагностика,
-кондиціонер або паливна система.
-
-Українською мовою.
+Тема повинна бути реально корисною власнику автомобіля.
 
 Дай:
+
 1. Назву теми.
-2. Коротко, про що написати.
-3. Яке фото краще зробити для такої публікації.
+2. Про що коротко розповісти.
+3. Яке фото зробити в автосервісі.
+
+Мова: українська.
 """
         )
 
@@ -782,8 +899,8 @@ def back_to_menu(message):
 def autopost(message):
     bot.send_message(
         message.chat.id,
-        "📅 Автопублікацію підключимо після "
-        "підключення Google Business Profile."
+        "📅 Автопублікацію підключимо "
+        "після Google Business Profile."
     )
 
 
@@ -804,7 +921,7 @@ def history(message):
 
 
 # =========================================================
-# ЗАПУСК БОТА
+# ЗАПУСК
 # =========================================================
 
 print(
